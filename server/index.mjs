@@ -8,6 +8,7 @@ import { buildRecommendation } from "./catalog.mjs";
 import { runMockAgent } from "./mock-agent.mjs";
 import { SYSTEM_PROMPT } from "./prompt.mjs";
 import { callChatModel, synthesizeSpeech, transcribeAudio } from "./providers.mjs";
+import { synthesizeVolcengineSpeech, transcribeVolcengineRecording } from "./volcengine-speech.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(__dirname, "..");
@@ -35,11 +36,29 @@ const config = {
   ttsVoice: process.env.TTS_VOICE || "alloy",
   ttsPath: process.env.TTS_PATH || "/audio/speech",
   audioTimeoutMs: Number(process.env.AUDIO_TIMEOUT_MS || 45000),
+  volcengineAppId: process.env.VOLCENGINE_APP_ID || "",
+  volcengineAsrApiKey: process.env.VOLCENGINE_ASR_API_KEY || process.env.VOLCENGINE_API_KEY || "",
+  volcengineTtsApiKey: process.env.VOLCENGINE_TTS_API_KEY || process.env.VOLCENGINE_API_KEY || "",
+  volcengineAccessToken: process.env.VOLCENGINE_ACCESS_TOKEN || "",
+  volcengineAsrSubmitEndpoint: process.env.VOLCENGINE_ASR_SUBMIT_ENDPOINT || "",
+  volcengineAsrQueryEndpoint: process.env.VOLCENGINE_ASR_QUERY_ENDPOINT || "",
+  volcengineAsrPollMs: Number(process.env.VOLCENGINE_ASR_POLL_MS || 1200),
+  volcengineTtsEndpoint: process.env.VOLCENGINE_TTS_ENDPOINT || "",
+  volcengineTtsResourceId: process.env.VOLCENGINE_TTS_RESOURCE_ID || "seed-tts-2.0",
+  volcengineTtsVoiceType: process.env.VOLCENGINE_TTS_VOICE_TYPE || "zh_male_zhuangzhou_uranus_bigtts",
+  volcengineTtsSpeechRate: Number(process.env.VOLCENGINE_TTS_SPEECH_RATE || -8),
+  volcengineTtsLoudnessRate: Number(process.env.VOLCENGINE_TTS_LOUDNESS_RATE || 0),
 };
 
 const hasLlm = Boolean(config.llmBaseUrl && config.llmApiKey && config.llmModel);
 const hasSttApi = config.sttProvider === "openai-compatible" && Boolean(config.sttBaseUrl && config.sttApiKey);
 const hasTtsApi = config.ttsProvider === "openai-compatible" && Boolean(config.ttsBaseUrl && config.ttsApiKey);
+const hasVolcengineStt = config.sttProvider === "volcengine-recording-v1" && Boolean(
+  (config.volcengineAsrApiKey || config.volcengineAccessToken) && (config.volcengineAppId || config.volcengineAsrApiKey),
+);
+const hasVolcengineTts = config.ttsProvider === "volcengine-tts-v2" && Boolean(
+  config.volcengineAppId && config.volcengineTtsApiKey && config.volcengineTtsVoiceType,
+);
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -47,8 +66,10 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/api/status", (_request, response) => {
   response.json({
     model: !config.mockMode && hasLlm ? "api" : "mock",
-    stt: hasSttApi ? "api" : "browser",
-    tts: hasTtsApi ? "api" : "browser",
+    stt: hasVolcengineStt || hasSttApi ? "api" : "browser",
+    tts: hasVolcengineTts || hasTtsApi ? "api" : "browser",
+    speechProvider: hasVolcengineStt || hasVolcengineTts ? "volcengine" : hasSttApi || hasTtsApi ? "openai-compatible" : "browser",
+    voice: hasVolcengineTts ? config.volcengineTtsVoiceType : undefined,
   });
 });
 
@@ -86,11 +107,13 @@ app.post("/api/chat", async (request, response) => {
 });
 
 app.post("/api/transcribe", upload.single("audio"), async (request, response) => {
-  if (!hasSttApi) return response.status(409).json({ error: "当前使用浏览器语音识别" });
+  if (!hasSttApi && !hasVolcengineStt) return response.status(409).json({ error: "当前使用浏览器语音识别" });
   if (!request.file) return response.status(400).json({ error: "没有收到音频文件" });
 
   try {
-    const text = await transcribeAudio({ config, file: request.file });
+    const text = hasVolcengineStt
+      ? await transcribeVolcengineRecording({ config, file: request.file })
+      : await transcribeAudio({ config, file: request.file });
     response.json({ text });
   } catch (error) {
     console.error(error);
@@ -99,12 +122,14 @@ app.post("/api/transcribe", upload.single("audio"), async (request, response) =>
 });
 
 app.post("/api/speech", async (request, response) => {
-  if (!hasTtsApi) return response.status(409).json({ error: "当前使用浏览器语音合成" });
+  if (!hasTtsApi && !hasVolcengineTts) return response.status(409).json({ error: "当前使用浏览器语音合成" });
   const text = String(request.body?.text || "").slice(0, 500);
   if (!text) return response.status(400).json({ error: "没有需要朗读的文字" });
 
   try {
-    const audio = await synthesizeSpeech({ config, text });
+    const audio = hasVolcengineTts
+      ? await synthesizeVolcengineSpeech({ config, text })
+      : await synthesizeSpeech({ config, text });
     response.type(audio.contentType).send(audio.buffer);
   } catch (error) {
     console.error(error);
@@ -121,5 +146,5 @@ app.use((request, response, next) => {
 
 app.listen(config.port, () => {
   console.log(`西溪四福局服务已启动：http://localhost:${config.port}`);
-  console.log(`文本模型：${!config.mockMode && hasLlm ? "API" : "本地演示"}；语音识别：${hasSttApi ? "API" : "浏览器"}；语音合成：${hasTtsApi ? "API" : "浏览器"}`);
+  console.log(`文本模型：${!config.mockMode && hasLlm ? "API" : "本地演示"}；语音识别：${hasVolcengineStt ? "火山 1.0" : hasSttApi ? "API" : "浏览器"}；语音合成：${hasVolcengineTts ? "火山 2.0" : hasTtsApi ? "API" : "浏览器"}`);
 });
