@@ -5,8 +5,9 @@ import cors from "cors";
 import express from "express";
 import multer from "multer";
 import { buildRecommendation } from "./catalog.mjs";
+import { enforceRecommendationTiming, sanitizeAgentResult } from "./conversation-policy.mjs";
 import { runMockAgent } from "./mock-agent.mjs";
-import { SYSTEM_PROMPT } from "./prompt.mjs";
+import { buildSystemPrompt } from "./prompt.mjs";
 import { callChatModel, synthesizeSpeech, transcribeAudio } from "./providers.mjs";
 import { synthesizeVolcengineSpeech, transcribeVolcengineRecording } from "./volcengine-speech.mjs";
 
@@ -21,8 +22,13 @@ const config = {
   llmBaseUrl: process.env.LLM_BASE_URL || "",
   llmApiKey: process.env.LLM_API_KEY || "",
   llmModel: process.env.LLM_MODEL || "",
+  llmFallbackModels: (process.env.LLM_FALLBACK_MODELS || "deepseek-v4-pro,deepseek-chat")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean),
   llmChatPath: process.env.LLM_CHAT_PATH || "/chat/completions",
   llmTemperature: Number(process.env.LLM_TEMPERATURE || 0.75),
+  llmMaxTokens: Number(process.env.LLM_MAX_TOKENS || 900),
   llmTimeoutMs: Number(process.env.LLM_TIMEOUT_MS || 30000),
   sttProvider: process.env.STT_PROVIDER || "browser",
   sttBaseUrl: process.env.STT_BASE_URL || process.env.LLM_BASE_URL || "",
@@ -68,6 +74,8 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/api/status", (_request, response) => {
   response.json({
     model: !config.mockMode && hasLlm ? "api" : "mock",
+    modelName: !config.mockMode && hasLlm ? config.llmModel : "local-rules",
+    fallbackModels: !config.mockMode && hasLlm ? config.llmFallbackModels : undefined,
     stt: hasVolcengineStt || hasSttApi ? "api" : "browser",
     tts: hasVolcengineTts || hasTtsApi ? "api" : "browser",
     speechProvider: hasVolcengineStt || hasVolcengineTts ? "volcengine" : hasSttApi || hasTtsApi ? "openai-compatible" : "browser",
@@ -87,24 +95,34 @@ app.post("/api/chat", async (request, response) => {
     if (config.mockMode || !hasLlm) {
       result = runMockAgent(safeMessages, profile);
     } else {
-      result = await callChatModel({ config, messages: safeMessages, systemPrompt: SYSTEM_PROMPT });
+      const modelResponse = await callChatModel({
+        config,
+        messages: safeMessages,
+        systemPrompt: buildSystemPrompt(safeMessages),
+      });
+      result = sanitizeAgentResult(modelResponse.data);
+      result = enforceRecommendationTiming(result, safeMessages);
       if (result.recommendation) {
         const normalized = buildRecommendation(
           result.recommendation.characterId,
           result.recommendation.productType,
+          result.recommendation,
         );
-        result.recommendation = {
-          ...normalized,
-          reason: result.recommendation.reason || normalized.reason,
-        };
+        result.recommendation = normalized;
       }
+      result.modelUsed = modelResponse.model;
     }
 
     response.json(result);
   } catch (error) {
     console.error(error);
     const fallback = runMockAgent(safeMessages, profile);
-    response.status(200).json({ ...fallback, degraded: true, error: "模型暂时不可用，已切换本地规则。" });
+    response.status(200).json({
+      ...fallback,
+      degraded: true,
+      modelUsed: "local-rules",
+      error: "模型暂时不可用，已切换本地规则。",
+    });
   }
 });
 

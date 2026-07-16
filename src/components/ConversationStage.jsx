@@ -28,13 +28,10 @@ export default function ConversationStage({
 
   return (
     <main className="conversation-stage">
-      <div className="fortune-heading">
-        <div className="fortune-avatar" aria-hidden="true">福</div>
-        <div>
-          <h2>四福先生在此</h2>
-          <p>听三句心里话，为你点一件今日福物。</p>
-        </div>
-      </div>
+      <header className="fortune-heading">
+        <h2>四福先生在此</h2>
+        <p>说几句心里话，先生为你点一份今日好运。</p>
+      </header>
 
       <div className="conversation-log" ref={scrollRef} aria-live="polite">
         {messages.map((message, index) => (
@@ -43,42 +40,45 @@ export default function ConversationStage({
             <p>{message.content}</p>
           </div>
         ))}
-        {loading && (
+        {loading ? (
           <div className="thinking-line">
             <LoaderCircle className="spin" aria-hidden="true" />
-            正在点福物
+            先生正在掐指点福
           </div>
-        )}
+        ) : null}
       </div>
 
-      {quickReplies.length > 0 && !loading && (
+      {quickReplies.length > 0 && !loading ? (
         <div className="quick-replies" aria-label="快捷回答">
           {quickReplies.map((reply) => (
             <button type="button" key={reply} onClick={() => onSend(reply)}>{reply}</button>
           ))}
         </div>
-      )}
+      ) : null}
 
-      {error && <p className="inline-error">{error}</p>}
+      {error ? <p className="inline-error">{error}</p> : null}
 
-      <div className="voice-dock">
-        <button className="small-tool" type="button" onClick={() => document.getElementById("text-answer")?.focus()} title="键盘输入">
-          <Keyboard aria-hidden="true" />
-          <span>键盘输入</span>
-        </button>
-        <button
-          className={`mic-button ${listening ? "is-listening" : ""}`}
-          type="button"
-          onClick={onMic}
-          aria-pressed={listening}
-        >
-          <Mic aria-hidden="true" />
-        </button>
+      <div className="answer-dock">
         <button className="small-tool" type="button" onClick={onReplay} title="重听先生的话">
           <Volume2 aria-hidden="true" />
           <span>重听语音</span>
         </button>
-        <span className="mic-label">{listening ? "正在听，请说话" : "点一下说话"}</span>
+        <div className="mic-control">
+          <button
+            className={`mic-button ${listening ? "is-listening" : ""}`}
+            type="button"
+            onClick={onMic}
+            aria-pressed={listening}
+            title={listening ? "停止录音" : "开始说话"}
+          >
+            <Mic aria-hidden="true" />
+          </button>
+          <span>{listening ? "正在听，请说话" : "点一下说话"}</span>
+        </div>
+        <button className="small-tool" type="button" onClick={() => document.getElementById("text-answer")?.focus()} title="键盘输入">
+          <Keyboard aria-hidden="true" />
+          <span>键盘输入</span>
+        </button>
       </div>
 
       <form className="text-entry" onSubmit={submit}>
@@ -87,7 +87,7 @@ export default function ConversationStage({
           id="text-answer"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="也可以在这里输入一句话"
+          placeholder="也可以在这里告诉先生"
           maxLength={300}
         />
         <button type="submit" disabled={!draft.trim() || loading} title="发送">

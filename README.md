@@ -3,12 +3,13 @@
 这是一个可放在西溪湿地文创摊位现场运行的语音互动网页应用。游客可以：
 
 1. 和“四福先生”进行中文语音或文字对话。
-2. 体验 1089、6174 数学魔术或四方民俗娱乐签。
+2. 在自然对话中随机体验数字、颜色、方位或西溪景物等民俗娱乐小术，也可能只进行轻松聊天。
 3. 根据“为谁问、想要什么祝福、喜欢怎样的体验”获得一个明确商品推荐。
 4. 推荐结果只会是以下一种，不会同时推多个产品：
    - 某位人物的成品香囊。
    - 某位人物的 DIY 香囊。
-   - 某位人物主题随机福袋。
+   - 水浒随机福袋。
+   - 某位人物主题水浒头巾。
 
 当前四位人物：
 
@@ -25,11 +26,10 @@
 - OpenAI 风格语音识别和语音合成接口。
 - 浏览器语音听写和系统朗读降级方案。
 - 模型不可用时的本地规则推荐。
-- 1089 好汉点将术。
-- 6174 聚义回环术。
-- 四方时运娱乐签。
+- 随会话随机融入的 1089、数字、颜色、方位和西溪景物小术。
+- 对话结束后的吉利好运判词、商品图片与单品推荐理由。
 - 桌面和手机响应式布局。
-- 四张现有水浒人物图已内置。
+- 算命先生主视觉、四张水浒人物图与三类商品展示图已内置。
 
 ## 二、快速运行
 
@@ -74,11 +74,15 @@ http://localhost:5173
 
 ```dotenv
 MOCK_MODE=false
-LLM_BASE_URL=https://你的接口地址/v1
+LLM_BASE_URL=https://api.deepseek.com
 LLM_API_KEY=你的密钥
-LLM_MODEL=你的模型名
+LLM_MODEL=deepseek-v4-flash
+LLM_FALLBACK_MODELS=deepseek-v4-pro,deepseek-chat
 LLM_CHAT_PATH=/chat/completions
+LLM_MAX_TOKENS=900
 ```
+
+该配置实际请求 `https://api.deepseek.com/chat/completions`。DeepSeek 的 Base URL 不要求末尾带 `/v1`；本项目已经用上述地址和 `deepseek-v4-flash` 完成真实调用测试。
 
 当前服务端默认兼容以下请求格式：
 
@@ -92,8 +96,10 @@ Content-Type: application/json
 
 ```json
 {
-  "model": "your-model",
+  "model": "deepseek-v4-flash",
   "temperature": 0.75,
+  "max_tokens": 900,
+  "response_format": { "type": "json_object" },
   "messages": [
     { "role": "system", "content": "..." },
     { "role": "user", "content": "..." }
@@ -235,9 +241,9 @@ Content-Type: application/json
 
 ```text
 算命先生Agent/
-├─ design/                  界面概念图和 GPT Image 2 提示词
+├─ garden-gpt-image-2/      界面概念图和 GPT Image 2 提示词
 ├─ docs/                    接口、对话和现场运营说明
-├─ public/assets/           四张水浒人物图
+├─ public/assets/           人物、算命先生和商品图片
 ├─ server/                  本地服务端、模型与语音代理
 ├─ src/                     React 前端
 ├─ .env.example             配置模板
@@ -253,7 +259,7 @@ Content-Type: application/json
 - 文本、STT、TTS 接口适配：`server/providers.mjs`
 - 服务端路由：`server/index.mjs`
 - 主界面状态：`src/App.jsx`
-- 三种小术：`src/components/MagicPanel.jsx`
+- 对话内随机小术与江湖商人人设：`server/prompt.mjs`
 - 语音输入输出：`src/hooks/useVoice.js`
 
 ## 九、上线前检查
@@ -262,7 +268,7 @@ Content-Type: application/json
 - [ ] `MOCK_MODE=false` 后真实模型能返回推荐。
 - [ ] 麦克风权限已允许。
 - [ ] 现场网络和备用热点均测试过。
-- [ ] 四张人物图正常加载。
+- [ ] 算命先生主视觉和三张商品图正常加载。
 - [ ] 扬声器音量不会影响周围游客。
 - [ ] 模型输出不会承诺疾病、财运、考试或命运结果。
 - [ ] 每次最终只出现一个商品。

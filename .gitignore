@@ -10,6 +10,7 @@ dist/
 coverage/
 .npm-cache/
 .playwright-browsers/
+.playwright-cli/
 
 # Test and runtime output
 *.log

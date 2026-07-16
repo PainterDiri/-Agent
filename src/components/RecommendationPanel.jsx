@@ -1,43 +1,48 @@
-import { Check, Gift, Hand, ShoppingBag } from "lucide-react";
-import { characterMap } from "../data/characters";
+import { Check, Sparkles } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-const typeIcons = {
-  finished_sachet: ShoppingBag,
-  diy_sachet: Hand,
-  lucky_bag: Gift,
-};
+export default function RecommendationPanel({ recommendation }) {
+  const panelRef = useRef(null);
 
-export default function RecommendationPanel({ recommendation, activeCharacter }) {
-  const character = recommendation ? characterMap[recommendation.characterId] : activeCharacter;
-  const Icon = recommendation ? typeIcons[recommendation.productType] || ShoppingBag : ShoppingBag;
+  useEffect(() => {
+    if (recommendation && window.matchMedia("(max-width: 820px)").matches) {
+      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [recommendation]);
 
   return (
-    <aside className={`recommendation-panel ${recommendation ? "has-result" : ""}`} aria-live="polite">
-      <div className="wetland-sketch" aria-hidden="true">
-        <span className="water-line" />
-        <span className="reed-line one" />
-        <span className="reed-line two" />
-        <span className="reed-line three" />
-      </div>
-
-      {character && <img className="recommendation-character" src={character.image} alt="" />}
-
+    <aside ref={panelRef} className={`recommendation-panel ${recommendation ? "has-result" : ""}`} aria-live="polite">
       {!recommendation ? (
-        <div className="recommendation-waiting">
-          <Icon aria-hidden="true" />
-          <h2>今日福物尚未点定</h2>
-          <p>聊完几句，先生只为你指向一件具体商品。</p>
+        <div className="fortune-teller-stage">
+          <div className="character-halo" aria-hidden="true" />
+          <img src="/assets/fortune-teller-stage.png" alt="手持折扇、坐在签桌后的四福先生动画形象" />
+          <div className="waiting-copy">
+            <Sparkles aria-hidden="true" />
+            <p>先生会在对话里自然穿插一种小术，也可能只听你说几句。</p>
+            <strong>好运只往吉处解，福物最终只点一件。</strong>
+          </div>
         </div>
       ) : (
         <div className="recommendation-result">
-          <span className="result-check"><Check aria-hidden="true" /></span>
-          <p className="result-label">先生为你点定</p>
-          <h2>{recommendation.productName}</h2>
-          <p className="result-blessing">{recommendation.blessingLine}</p>
-          <div className="result-reason">
-            <Icon aria-hidden="true" />
-            <p>{recommendation.reason}</p>
+          <div className="fortune-title-row">
+            <span className="result-check"><Check aria-hidden="true" /></span>
+            <div>
+              <p className="result-label">先生点出的今日好运</p>
+              <h2>{recommendation.fortuneTitle}</h2>
+            </div>
           </div>
+          <p className="fortune-reading">{recommendation.fortuneReading}</p>
+
+          <div className="product-display">
+            <img src={recommendation.productImage} alt={recommendation.productTypeLabel} />
+            <div className="product-copy">
+              <p className="product-kicker">为你点定一件福物</p>
+              <h3>{recommendation.productName}</h3>
+              <p>{recommendation.reason}</p>
+            </div>
+          </div>
+
+          <p className="sales-line">{recommendation.salesLine}</p>
           <p className="staff-line">把这一页给摊位工作人员看，即可找到对应福物。</p>
         </div>
       )}
