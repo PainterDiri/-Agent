@@ -37,7 +37,9 @@ const config = {
   ttsPath: process.env.TTS_PATH || "/audio/speech",
   audioTimeoutMs: Number(process.env.AUDIO_TIMEOUT_MS || 45000),
   volcengineAppId: process.env.VOLCENGINE_APP_ID || "",
-  volcengineAsrApiKey: process.env.VOLCENGINE_ASR_API_KEY || process.env.VOLCENGINE_API_KEY || "",
+  volcengineAsrApiKey: process.env.VOLCENGINE_ASR_API_KEY
+    || (process.env.VOLCENGINE_ACCESS_TOKEN ? "" : process.env.VOLCENGINE_API_KEY)
+    || "",
   volcengineTtsApiKey: process.env.VOLCENGINE_TTS_API_KEY || process.env.VOLCENGINE_API_KEY || "",
   volcengineAccessToken: process.env.VOLCENGINE_ACCESS_TOKEN || "",
   volcengineAsrSubmitEndpoint: process.env.VOLCENGINE_ASR_SUBMIT_ENDPOINT || "",
@@ -57,7 +59,7 @@ const hasVolcengineStt = config.sttProvider === "volcengine-recording-v1" && Boo
   (config.volcengineAsrApiKey || config.volcengineAccessToken) && (config.volcengineAppId || config.volcengineAsrApiKey),
 );
 const hasVolcengineTts = config.ttsProvider === "volcengine-tts-v2" && Boolean(
-  config.volcengineAppId && config.volcengineTtsApiKey && config.volcengineTtsVoiceType,
+  config.volcengineTtsApiKey && config.volcengineTtsVoiceType,
 );
 
 app.use(cors());

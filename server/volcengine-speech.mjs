@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -129,9 +130,9 @@ export async function synthesizeVolcengineSpeech({ config, text }) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Api-App-Id": config.volcengineAppId,
-      "X-Api-Access-Key": config.volcengineTtsApiKey,
+      "X-Api-Key": config.volcengineTtsApiKey,
       "X-Api-Resource-Id": config.volcengineTtsResourceId,
+      "X-Api-Connect-Id": randomUUID(),
     },
     body: JSON.stringify({
       user: { uid: `xixi-${Date.now()}` },
@@ -162,8 +163,11 @@ export async function synthesizeVolcengineSpeech({ config, text }) {
   const responseText = await response.text();
   const audioChunks = [];
   for (const line of responseText.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    const payload = parseJsonText(line, "火山 TTS");
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("event:")) continue;
+    const jsonText = trimmed.startsWith("data:") ? trimmed.slice(5).trim() : trimmed;
+    if (!jsonText || jsonText === "[DONE]") continue;
+    const payload = parseJsonText(jsonText, "火山 TTS");
     if (Number(payload.code ?? 0) > 0 && Number(payload.code) !== 20000000) {
       throw new Error(`火山 TTS 合成失败：${extractError(payload) || line.slice(0, 300)}`);
     }
@@ -172,4 +176,3 @@ export async function synthesizeVolcengineSpeech({ config, text }) {
   if (!audioChunks.length) throw new Error("火山 TTS 没有返回音频数据");
   return { contentType: "audio/mpeg", buffer: Buffer.concat(audioChunks) };
 }
-

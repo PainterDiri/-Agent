@@ -275,8 +275,8 @@ Content-Type: application/json
 
 1. 双击 `配置火山语音.cmd`。
 2. 输入应用的 App ID。
-3. 输入 API Key；输入过程不会显示字符。
-4. 双击 `测试火山语音.cmd` 测试庄周 2.0 音色。
+3. 输入语音应用页面生成的 API Key；不要使用账号通用 Access Key，输入过程不会显示字符。
+4. 双击 `测试火山语音.cmd`，脚本会分别测试庄周 2.0 合成和录音文件识别。
 5. 双击 `启动现场版.cmd`，在网页中点击麦克风测试真实录音识别。
 
 向导会固定使用：
@@ -286,3 +286,5 @@ zh_male_zhuangzhou_uranus_bigtts
 ```
 
 真实密钥只写入被 Git 忽略的 `.env`，不会进入源码或 GitHub。
+
+如果 TTS 成功但 ASR 提示 `vc.async.default` 未授权，说明两项服务不能复用当前 Key。请在“录音文件识别 1.0”的“API 接入/调用示例”中复制其专用 API Key 到 `VOLCENGINE_ASR_API_KEY`；如果该页面显示的是 Access Token，则写入 `VOLCENGINE_ACCESS_TOKEN`，并保持 `VOLCENGINE_ASR_API_KEY` 为空。
