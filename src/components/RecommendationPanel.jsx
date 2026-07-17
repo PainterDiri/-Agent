@@ -15,7 +15,7 @@ export default function RecommendationPanel({ recommendation }) {
       {!recommendation ? (
         <div className="fortune-teller-stage">
           <div className="character-halo" aria-hidden="true" />
-          <img src="/assets/fortune-teller-stage.png" alt="手持折扇、坐在签桌后的四福先生动画形象" />
+          <img src="/assets/fortune-teller-stage.png" alt="手持折扇、坐在签桌后的知福先生动画形象" />
           <div className="waiting-copy">
             <Sparkles aria-hidden="true" />
             <p>先生会在对话里自然穿插一种小术，也可能只听你说几句。</p>

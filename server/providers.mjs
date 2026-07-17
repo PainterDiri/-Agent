@@ -30,7 +30,8 @@ export async function callChatModel({ config, messages, systemPrompt }) {
   const models = [...new Set([config.llmModel, ...(config.llmFallbackModels || [])].filter(Boolean))];
   const errors = [];
 
-  for (const model of models) {
+  for (const [index, model] of models.entries()) {
+    const timeoutMs = index === 0 ? config.llmTimeoutMs : (config.llmFallbackTimeoutMs || config.llmTimeoutMs);
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
         const response = await fetchWithTimeout(
@@ -43,13 +44,13 @@ export async function callChatModel({ config, messages, systemPrompt }) {
             },
             body: JSON.stringify({
               model,
-              temperature: attempt === 1 ? config.llmTemperature : Math.min(config.llmTemperature, 0.45),
+              temperature: config.llmTemperature,
               max_tokens: config.llmMaxTokens,
               response_format: { type: "json_object" },
               messages: [{ role: "system", content: systemPrompt }, ...messages],
             }),
           },
-          config.llmTimeoutMs,
+          timeoutMs,
         );
 
         if (!response.ok) {
@@ -62,11 +63,14 @@ export async function callChatModel({ config, messages, systemPrompt }) {
         if (!content?.trim()) {
           const reasoningTokens = data.usage?.completion_tokens_details?.reasoning_tokens;
           const finishReason = data.choices?.[0]?.finish_reason || "unknown";
-          throw new Error(`响应正文为空${reasoningTokens ? `，已消耗 ${reasoningTokens} 个推理 token` : ""}，finish=${finishReason}`);
+          const emptyError = new Error(`响应正文为空${reasoningTokens ? `，已消耗 ${reasoningTokens} 个推理 token` : ""}，finish=${finishReason}`);
+          emptyError.retryEmptyResponse = true;
+          throw emptyError;
         }
         return { data: parseJsonObject(content), model };
       } catch (error) {
-        errors.push(`${model}#${attempt}: ${error.message}`);
+        errors.push(`${model}#${attempt}: ${error.name === "AbortError" ? "请求超时" : error.message}`);
+        if (!error.retryEmptyResponse) break;
       }
     }
   }

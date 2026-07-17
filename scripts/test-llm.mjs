@@ -6,14 +6,15 @@ const config = {
   llmBaseUrl: process.env.LLM_BASE_URL || "",
   llmApiKey: process.env.LLM_API_KEY || "",
   llmModel: process.env.LLM_MODEL || "",
-  llmFallbackModels: (process.env.LLM_FALLBACK_MODELS || "deepseek-v4-pro,deepseek-chat")
+  llmFallbackModels: (process.env.LLM_FALLBACK_MODELS || "deepseek-v4-flash")
     .split(",")
     .map((model) => model.trim())
     .filter(Boolean),
   llmChatPath: process.env.LLM_CHAT_PATH || "/chat/completions",
   llmTemperature: Number(process.env.LLM_TEMPERATURE || 0.75),
-  llmMaxTokens: Number(process.env.LLM_MAX_TOKENS || 900),
-  llmTimeoutMs: Number(process.env.LLM_TIMEOUT_MS || 30000),
+  llmMaxTokens: Number(process.env.LLM_MAX_TOKENS || 2200),
+  llmTimeoutMs: Number(process.env.LLM_TIMEOUT_MS || 22000),
+  llmFallbackTimeoutMs: Number(process.env.LLM_FALLBACK_TIMEOUT_MS || 12000),
 };
 
 const missing = ["llmBaseUrl", "llmApiKey", "llmModel"].filter((key) => !config[key]);

@@ -59,7 +59,8 @@ export default function App() {
           modelName: data.modelUsed,
         }));
       }
-      if (data.degraded) setError("DeepSeek 本轮未响应，先生已用本地规则继续接待。稍后可重试。 ");
+      // A local response can bridge an occasional empty model response without interrupting the visitor.
+      if (!data.degraded) setError("");
       speak(data.reply);
     } catch (requestError) {
       setError(requestError.message);

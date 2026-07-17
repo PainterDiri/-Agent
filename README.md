@@ -1,8 +1,8 @@
-# 西溪四福局·算命先生 Agent
+# 梁山福铺·知福先生 Agent
 
 这是一个可放在西溪湿地文创摊位现场运行的语音互动网页应用。游客可以：
 
-1. 和“四福先生”进行中文语音或文字对话。
+1. 和“知福先生”进行中文语音或文字对话。
 2. 在自然对话中随机体验数字、颜色、方位或西溪景物等民俗娱乐小术，也可能只进行轻松聊天。
 3. 根据“为谁问、想要什么祝福、喜欢怎样的体验”获得一个明确商品推荐。
 4. 推荐结果只会是以下一种，不会同时推多个产品：
@@ -76,13 +76,15 @@ http://localhost:5173
 MOCK_MODE=false
 LLM_BASE_URL=https://api.deepseek.com
 LLM_API_KEY=你的密钥
-LLM_MODEL=deepseek-v4-flash
-LLM_FALLBACK_MODELS=deepseek-v4-pro,deepseek-chat
+LLM_MODEL=deepseek-v4-pro
+LLM_FALLBACK_MODELS=deepseek-v4-flash
 LLM_CHAT_PATH=/chat/completions
-LLM_MAX_TOKENS=900
+LLM_MAX_TOKENS=2200
+LLM_TIMEOUT_MS=22000
+LLM_FALLBACK_TIMEOUT_MS=12000
 ```
 
-该配置实际请求 `https://api.deepseek.com/chat/completions`。DeepSeek 的 Base URL 不要求末尾带 `/v1`；本项目已经用上述地址和 `deepseek-v4-flash` 完成真实调用测试。
+该配置实际请求 `https://api.deepseek.com/chat/completions`。DeepSeek 的 Base URL 不要求末尾带 `/v1`；本项目以 `deepseek-v4-pro` 作为稳定主模型，若主模型超时会立即切换到响应更快的 `deepseek-v4-flash`。若 V4 偶发返回“推理完成但正文为空”，会快速补试一次；仍不可用时由同一套长对话本地规则无缝接话，下一轮继续尝试 API，游客界面不会弹出技术错误。
 
 当前服务端默认兼容以下请求格式：
 
@@ -96,9 +98,9 @@ Content-Type: application/json
 
 ```json
 {
-  "model": "deepseek-v4-flash",
+  "model": "deepseek-v4-pro",
   "temperature": 0.75,
-  "max_tokens": 900,
+  "max_tokens": 2200,
   "response_format": { "type": "json_object" },
   "messages": [
     { "role": "system", "content": "..." },

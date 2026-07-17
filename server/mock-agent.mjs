@@ -25,7 +25,7 @@ function chooseProduct(text) {
 function techniqueQuestion(techniqueId) {
   const questions = {
     "three-scenes": { reply: "先不忙说愿望。水、桥、芦苇，客官第一眼更有缘的是哪一样？", quickReplies: ["水", "桥", "芦苇"] },
-    direction: { reply: "借西溪四方水气一问：东、南、西、北，客官第一感觉想选哪一方？", quickReplies: ["东", "南", "西", "北"] },
+    direction: { reply: "你愿意凭直觉来选，说明心里有股干脆劲，这样的人遇事往往不拖泥带水。借西溪四方水气一问：东、南、西、北，客官第一感觉想选哪一方？", quickReplies: ["东", "南", "西", "北"] },
     number: { reply: "客官凭第一念，在一到九里挑一个数，不必多想。", quickReplies: ["1", "3", "6", "8"] },
     color: { reply: "朱红、墨绿、江蓝、鎏金，客官第一眼更中意哪一种？", quickReplies: ["朱红", "墨绿", "江蓝", "鎏金"] },
     "1089": { reply: "客官若喜欢数字，可想一个首尾不同的三位数；若不想算，先生也能直接听心愿。", quickReplies: ["玩数字", "直接聊心愿"] },
@@ -35,6 +35,7 @@ function techniqueQuestion(techniqueId) {
 
 export function runMockAgent(messages) {
   const userMessages = messages.filter((message) => message.role === "user");
+  const userTurns = userMessages.length;
   const userText = userMessages.map((message) => message.content).join("；");
   if (/不想买|不买|只想玩|不用推荐|不需要买/.test(userText)) {
     return {
@@ -72,19 +73,46 @@ export function runMockAgent(messages) {
     };
   }
 
-  const hasProductPreference = /DIY|自己做|亲手|动手|随机|惊喜|福袋|兵器|贴纸|直接|成品|带走|赶时间|头巾|穿戴|拍照|户外/.test(userText);
+  if (userTurns < 3) {
+    return {
+      reply: "你说的愿望不贪多，求的是日子真正顺心，可见是个有分寸的人。先生再看一层：眼下最希望这份好运帮你把事情推着往前，还是让心里松快下来？",
+      stage: "fortune",
+      quickReplies: ["事情往前走", "心里松快些"],
+      recommendation: null,
+    };
+  }
+
+  if (userTurns < 4) {
+    return {
+      reply: "能把自己真正想要的说清楚，本身就是接住好运的本事。先生看你这份福不是猛冲的福，而是越走越稳、身边人也愿意相助的福。最近更看重出行办事、家人相聚，还是留一段开心回忆？",
+      stage: "fortune",
+      quickReplies: ["出行办事", "家人相聚", "开心回忆"],
+      recommendation: null,
+    };
+  }
+
+  const hasProductPreference = /DIY|自己做|亲手|亲手制作|动手|随机|惊喜|拆开惊喜|福袋|兵器|贴纸|直接|成品|带走|随身香气|赶时间|头巾|穿戴|穿戴留影|拍照|户外/.test(userText);
   if (!hasProductPreference) {
     return {
-      reply: "好运已经有了方向。你想直接带走香囊、亲手做一只、开个随机福袋，还是戴一条水浒头巾？",
-      stage: "profiling",
-      quickReplies: ["直接带走", "亲手 DIY", "开随机福袋", "想戴头巾"],
+      reply: "这份好运已经说得圆满：你心里有方向，身边也有人气，接下来宜稳稳往前走。若想让这份好意头留个念想，你更喜欢留一缕随身香气、亲手做点东西、拆开一份惊喜，还是穿戴起来留个影？",
+      stage: "fortune",
+      quickReplies: ["随身香气", "亲手制作", "拆开惊喜", "穿戴留影"],
+      recommendation: null,
+    };
+  }
+
+  if (userTurns < 6) {
+    return {
+      reply: "这选择很合你的心意，也看得出你是个既讲实用、又懂得给日子添趣的人。愿你所念之人常有笑意，所走之路多遇顺风；请先生再替你收好这句福。",
+      stage: "fortune",
+      quickReplies: ["请先生点定福物"],
       recommendation: null,
     };
   }
 
   const recommendation = buildRecommendation(scoreCharacters(userText), chooseProduct(userText));
   return {
-    reply: `先生点定：${recommendation.fortuneTitle}。${recommendation.fortuneReading}${recommendation.salesLine}`,
+    reply: `先生替你收成一句：${recommendation.fortuneTitle}。${recommendation.fortuneReading}方才这份好意头，正好可以落在${recommendation.productName}上，留作今天的一份纪念。`,
     stage: "recommendation",
     quickReplies: ["就选这件福物", "重新开始"],
     recommendation,

@@ -11,6 +11,7 @@ const config = {
   llmTemperature: 0.6,
   llmMaxTokens: 900,
   llmTimeoutMs: 5000,
+  llmFallbackTimeoutMs: 2000,
 };
 
 test("chat provider requests JSON output and returns the used model", async () => {
@@ -32,7 +33,7 @@ test("chat provider requests JSON output and returns the used model", async () =
   }
 });
 
-test("chat provider falls back when reasoning model returns empty content", async () => {
+test("chat provider retries one fast empty response before falling back", async () => {
   const originalFetch = global.fetch;
   const requestedModels = [];
   global.fetch = async (_url, options) => {
@@ -52,6 +53,44 @@ test("chat provider falls back when reasoning model returns empty content", asyn
     assert.equal(result.model, "chat-model");
     assert.equal(result.data.reply, "稳");
     assert.deepEqual(requestedModels, ["reasoning-model", "reasoning-model", "chat-model"]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("chat provider gives the fallback model its shorter timeout", async () => {
+  const originalFetch = global.fetch;
+  const timeoutSignals = [];
+  global.fetch = async (_url, options) => {
+    timeoutSignals.push(options.signal);
+    const body = JSON.parse(options.body);
+    if (body.model === "reasoning-model") throw new Error("primary unavailable");
+    return Response.json({ choices: [{ message: { content: '{"reply":"接上了","stage":"fortune","quickReplies":[],"recommendation":null}' } }] });
+  };
+
+  try {
+    const result = await callChatModel({ config, messages: [], systemPrompt: "test" });
+    assert.equal(result.model, "chat-model");
+    assert.equal(timeoutSignals.length, 2);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("chat provider does not retry a timed out or failed request", async () => {
+  const originalFetch = global.fetch;
+  const requestedModels = [];
+  global.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    requestedModels.push(body.model);
+    if (body.model === "reasoning-model") throw new DOMException("timed out", "AbortError");
+    return Response.json({ choices: [{ message: { content: '{"reply":"快速接上","stage":"fortune","quickReplies":[],"recommendation":null}' } }] });
+  };
+
+  try {
+    const result = await callChatModel({ config, messages: [], systemPrompt: "test" });
+    assert.equal(result.model, "chat-model");
+    assert.deepEqual(requestedModels, ["reasoning-model", "chat-model"]);
   } finally {
     global.fetch = originalFetch;
   }

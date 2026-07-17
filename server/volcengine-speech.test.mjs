@@ -110,7 +110,7 @@ test("Volcengine recording recognition 1.0 converts audio, submits and polls", a
     }
     queryCount += 1;
     if (queryCount === 1) return Response.json({ code: 2000, message: "processing" });
-    return Response.json({ code: 0, result: { text: "西溪四福局" } });
+    return Response.json({ code: 0, result: { text: "梁山福铺" } });
   };
 
   try {
@@ -131,7 +131,7 @@ test("Volcengine recording recognition 1.0 converts audio, submits and polls", a
       },
     });
 
-    assert.equal(text, "西溪四福局");
+    assert.equal(text, "梁山福铺");
     assert.equal(calls.length, 3);
     assert.match(calls[0].url, /appid=app-1/);
     assert.match(calls[0].url, /language=zh-CN/);

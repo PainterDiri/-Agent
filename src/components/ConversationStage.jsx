@@ -29,7 +29,7 @@ export default function ConversationStage({
   return (
     <main className="conversation-stage">
       <header className="fortune-heading">
-        <h2>四福先生在此</h2>
+        <h2>知福先生在此</h2>
         <p>说几句心里话，先生为你点一份今日好运。</p>
       </header>
 

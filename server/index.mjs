@@ -22,14 +22,15 @@ const config = {
   llmBaseUrl: process.env.LLM_BASE_URL || "",
   llmApiKey: process.env.LLM_API_KEY || "",
   llmModel: process.env.LLM_MODEL || "",
-  llmFallbackModels: (process.env.LLM_FALLBACK_MODELS || "deepseek-v4-pro,deepseek-chat")
+  llmFallbackModels: (process.env.LLM_FALLBACK_MODELS || "deepseek-v4-flash")
     .split(",")
     .map((model) => model.trim())
     .filter(Boolean),
   llmChatPath: process.env.LLM_CHAT_PATH || "/chat/completions",
   llmTemperature: Number(process.env.LLM_TEMPERATURE || 0.75),
-  llmMaxTokens: Number(process.env.LLM_MAX_TOKENS || 900),
-  llmTimeoutMs: Number(process.env.LLM_TIMEOUT_MS || 30000),
+  llmMaxTokens: Number(process.env.LLM_MAX_TOKENS || 2200),
+  llmTimeoutMs: Number(process.env.LLM_TIMEOUT_MS || 22000),
+  llmFallbackTimeoutMs: Number(process.env.LLM_FALLBACK_TIMEOUT_MS || 12000),
   sttProvider: process.env.STT_PROVIDER || "browser",
   sttBaseUrl: process.env.STT_BASE_URL || process.env.LLM_BASE_URL || "",
   sttApiKey: process.env.STT_API_KEY || process.env.LLM_API_KEY || "",
@@ -87,7 +88,7 @@ app.post("/api/chat", async (request, response) => {
   const { messages = [], profile = {} } = request.body || {};
   const safeMessages = messages
     .filter((message) => ["user", "assistant"].includes(message.role) && typeof message.content === "string")
-    .slice(-12)
+    .slice(-20)
     .map((message) => ({ role: message.role, content: message.content.slice(0, 600) }));
 
   try {
@@ -121,7 +122,6 @@ app.post("/api/chat", async (request, response) => {
       ...fallback,
       degraded: true,
       modelUsed: "local-rules",
-      error: "模型暂时不可用，已切换本地规则。",
     });
   }
 });
@@ -165,6 +165,6 @@ app.use((request, response, next) => {
 });
 
 app.listen(config.port, () => {
-  console.log(`西溪四福局服务已启动：http://localhost:${config.port}`);
+  console.log(`梁山福铺服务已启动：http://localhost:${config.port}`);
   console.log(`文本模型：${!config.mockMode && hasLlm ? "API" : "本地演示"}；语音识别：${hasVolcengineStt ? "火山 1.0" : hasSttApi ? "API" : "浏览器"}；语音合成：${hasVolcengineTts ? "火山 2.0" : hasTtsApi ? "API" : "浏览器"}`);
 });
