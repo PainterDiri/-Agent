@@ -26,8 +26,14 @@ if ([string]::IsNullOrWhiteSpace($apiKey)) {
     throw "API Key is required."
 }
 
+$existingLines = Get-Content -LiteralPath $envPath -Encoding UTF8
+$hasDedicatedAsrCredential = $existingLines | Where-Object {
+    $_ -match '^\s*(VOLCENGINE_ASR_API_KEY|VOLCENGINE_ACCESS_TOKEN)\s*=\s*\S+'
+}
+$sttProvider = if ($hasDedicatedAsrCredential) { "volcengine-recording-v1" } else { "browser" }
+
 $values = [ordered]@{
-    "STT_PROVIDER" = "volcengine-recording-v1"
+    "STT_PROVIDER" = $sttProvider
     "TTS_PROVIDER" = "volcengine-tts-v2"
     "VOLCENGINE_APP_ID" = $appId.Trim()
     "VOLCENGINE_API_KEY" = $apiKey.Trim()
@@ -66,10 +72,15 @@ $secureApiKey = $null
 
 Write-Host ""
 Write-Host "Saved to local .env:" -ForegroundColor Green
-Write-Host "  ASR: Recording File Recognition 1.0"
+if ($sttProvider -eq "volcengine-recording-v1") {
+    Write-Host "  ASR: Recording File Recognition 1.0 (dedicated credential found)"
+} else {
+    Write-Host "  ASR: Browser Chinese dictation" -ForegroundColor Yellow
+    Write-Host "  Reason: TTS API Key cannot be reused for vc.async.default."
+}
 Write-Host "  TTS: Speech Synthesis 2.0"
 Write-Host "  Voice: Zhuangzhou 2.0 (zh_male_zhuangzhou_uranus_bigtts)"
-Write-Host "  Note: existing ASR-specific API Key or Access Token was preserved."
+Write-Host "  Note: add an ASR-specific API Key or Access Token before enabling Recording Recognition 1.0."
 Write-Host ""
 Write-Host "Next: double-click the speech test CMD file." -ForegroundColor Cyan
 Pause

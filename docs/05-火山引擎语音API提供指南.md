@@ -12,26 +12,26 @@
 | TTS | 语音合成 2.0 | V3 HTTP 单向流式接口，自动拼接分片 MP3 |
 | 音色 | 庄周 2.0 | `zh_male_zhuangzhou_uranus_bigtts` |
 
-最简单的配置方式：
+最简单且当前已验证的配置方式：
 
 1. 双击项目根目录中的 `配置火山语音.cmd`。
 2. 输入同一火山语音应用的 App ID。
 3. 输入语音应用页面生成的 API Key；输入过程不会显示字符。
-4. 双击 `测试火山语音.cmd`，它会分别检查 TTS 和 ASR。
+4. 双击 `测试火山语音.cmd`。它会检查 TTS；没有 ASR 专用凭证时会保留浏览器中文听写。
 5. 测试通过后双击 `启动现场版.cmd`，在网页里测试麦克风。
 
 真实 App ID 和 API Key 只进入本地 `.env`，不需要发给我。
 
-> 当前实测结论：语音合成 2.0 的 V3 接口使用 `X-Api-Key`，不是 `X-Api-App-Id + X-Api-Access-Key`。录音文件识别 1.0 可能使用另一份 API Key，也可能仍显示旧版 Access Token。两项服务只有在控制台调用示例明确给出同一 Key 时才共用 `VOLCENGINE_API_KEY`。
+> 当前实测结论：语音合成 2.0 的 V3 接口使用 `X-Api-Key`。录音文件识别 1.0 的 `vc.async.default` 必须使用该服务自己的 API Key 或旧版 Access Token；项目不再复用 `VOLCENGINE_API_KEY`。
 
-如果测试显示 TTS 成功、ASR 返回 `[resource_id=vc.async.default] requested resource not granted`：
+如果此前显示 TTS 成功、ASR 返回 `[resource_id=vc.async.default] requested resource not granted`：
 
 1. 在火山控制台进入当前应用的“录音文件识别 1.0”。
 2. 打开“API 接入”“调用示例”或同义入口。
 3. 如果页面显示 API Key，把它写入 `.env` 的 `VOLCENGINE_ASR_API_KEY=`。
 4. 如果页面显示 Access Token，把它写入 `VOLCENGINE_ACCESS_TOKEN=`，并保持 `VOLCENGINE_ASR_API_KEY=` 为空。
 5. 不要把账号安全中心/IAM 页面创建的通用 Access Key 填到这里。
-6. 重新双击 `测试火山语音.cmd`；测试会用庄周合成音频自动完成一次 TTS 到 ASR 闭环。
+6. 没有专用凭证时保持 `STT_PROVIDER=browser`；填好专用凭证后再改为 `STT_PROVIDER=volcengine-recording-v1` 并运行闭环测试。
 
 ## 一、你最终需要准备什么
 

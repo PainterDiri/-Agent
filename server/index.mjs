@@ -9,12 +9,14 @@ import { enforceRecommendationTiming, sanitizeAgentResult } from "./conversation
 import { runMockAgent } from "./mock-agent.mjs";
 import { buildSystemPrompt } from "./prompt.mjs";
 import { callChatModel, synthesizeSpeech, transcribeAudio } from "./providers.mjs";
+import { resolveVolcengineSpeechConfig } from "./speech-config.mjs";
 import { synthesizeVolcengineSpeech, transcribeVolcengineRecording } from "./volcengine-speech.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(__dirname, "..");
 const app = express();
 const upload = multer({ limits: { fileSize: 12 * 1024 * 1024 } });
+const resolvedVolcengineSpeech = resolveVolcengineSpeechConfig(process.env);
 
 const config = {
   port: Number(process.env.PORT || 8787),
@@ -43,18 +45,16 @@ const config = {
   ttsVoice: process.env.TTS_VOICE || "alloy",
   ttsPath: process.env.TTS_PATH || "/audio/speech",
   audioTimeoutMs: Number(process.env.AUDIO_TIMEOUT_MS || 45000),
-  volcengineAppId: process.env.VOLCENGINE_APP_ID || "",
-  volcengineAsrApiKey: process.env.VOLCENGINE_ASR_API_KEY
-    || (process.env.VOLCENGINE_ACCESS_TOKEN ? "" : process.env.VOLCENGINE_API_KEY)
-    || "",
-  volcengineTtsApiKey: process.env.VOLCENGINE_TTS_API_KEY || process.env.VOLCENGINE_API_KEY || "",
-  volcengineAccessToken: process.env.VOLCENGINE_ACCESS_TOKEN || "",
+  volcengineAppId: resolvedVolcengineSpeech.volcengineAppId,
+  volcengineAsrApiKey: resolvedVolcengineSpeech.volcengineAsrApiKey,
+  volcengineTtsApiKey: resolvedVolcengineSpeech.volcengineTtsApiKey,
+  volcengineAccessToken: resolvedVolcengineSpeech.volcengineAccessToken,
   volcengineAsrSubmitEndpoint: process.env.VOLCENGINE_ASR_SUBMIT_ENDPOINT || "",
   volcengineAsrQueryEndpoint: process.env.VOLCENGINE_ASR_QUERY_ENDPOINT || "",
   volcengineAsrPollMs: Number(process.env.VOLCENGINE_ASR_POLL_MS || 1200),
   volcengineTtsEndpoint: process.env.VOLCENGINE_TTS_ENDPOINT || "",
   volcengineTtsResourceId: process.env.VOLCENGINE_TTS_RESOURCE_ID || "seed-tts-2.0",
-  volcengineTtsVoiceType: process.env.VOLCENGINE_TTS_VOICE_TYPE || "zh_male_zhuangzhou_uranus_bigtts",
+  volcengineTtsVoiceType: resolvedVolcengineSpeech.volcengineTtsVoiceType,
   volcengineTtsSpeechRate: Number(process.env.VOLCENGINE_TTS_SPEECH_RATE || -8),
   volcengineTtsLoudnessRate: Number(process.env.VOLCENGINE_TTS_LOUDNESS_RATE || 0),
 };
@@ -62,12 +62,8 @@ const config = {
 const hasLlm = Boolean(config.llmBaseUrl && config.llmApiKey && config.llmModel);
 const hasSttApi = config.sttProvider === "openai-compatible" && Boolean(config.sttBaseUrl && config.sttApiKey);
 const hasTtsApi = config.ttsProvider === "openai-compatible" && Boolean(config.ttsBaseUrl && config.ttsApiKey);
-const hasVolcengineStt = config.sttProvider === "volcengine-recording-v1" && Boolean(
-  (config.volcengineAsrApiKey || config.volcengineAccessToken) && (config.volcengineAppId || config.volcengineAsrApiKey),
-);
-const hasVolcengineTts = config.ttsProvider === "volcengine-tts-v2" && Boolean(
-  config.volcengineTtsApiKey && config.volcengineTtsVoiceType,
-);
+const hasVolcengineStt = resolvedVolcengineSpeech.hasVolcengineStt;
+const hasVolcengineTts = resolvedVolcengineSpeech.hasVolcengineTts;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -79,6 +75,8 @@ app.get("/api/status", (_request, response) => {
     fallbackModels: !config.mockMode && hasLlm ? config.llmFallbackModels : undefined,
     stt: hasVolcengineStt || hasSttApi ? "api" : "browser",
     tts: hasVolcengineTts || hasTtsApi ? "api" : "browser",
+    sttProvider: hasVolcengineStt ? "volcengine-recording-v1" : hasSttApi ? "openai-compatible" : "browser",
+    ttsProvider: hasVolcengineTts ? "volcengine-tts-v2" : hasTtsApi ? "openai-compatible" : "browser",
     speechProvider: hasVolcengineStt || hasVolcengineTts ? "volcengine" : hasSttApi || hasTtsApi ? "openai-compatible" : "browser",
     voice: hasVolcengineTts ? config.volcengineTtsVoiceType : undefined,
   });

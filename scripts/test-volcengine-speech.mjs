@@ -9,9 +9,7 @@ const config = {
   volcengineTtsVoiceType: process.env.VOLCENGINE_TTS_VOICE_TYPE || "zh_male_zhuangzhou_uranus_bigtts",
   volcengineTtsSpeechRate: Number(process.env.VOLCENGINE_TTS_SPEECH_RATE || -8),
   volcengineTtsLoudnessRate: Number(process.env.VOLCENGINE_TTS_LOUDNESS_RATE || 0),
-  volcengineAsrApiKey: process.env.VOLCENGINE_ASR_API_KEY
-    || (process.env.VOLCENGINE_ACCESS_TOKEN ? "" : process.env.VOLCENGINE_API_KEY)
-    || "",
+  volcengineAsrApiKey: process.env.VOLCENGINE_ASR_API_KEY || "",
   volcengineAccessToken: process.env.VOLCENGINE_ACCESS_TOKEN || "",
   volcengineAsrSubmitEndpoint: process.env.VOLCENGINE_ASR_SUBMIT_ENDPOINT || "",
   volcengineAsrQueryEndpoint: process.env.VOLCENGINE_ASR_QUERY_ENDPOINT || "",
@@ -58,8 +56,7 @@ console.log("\n[2/2] 正在测试录音文件识别 1.0……");
 if (!ttsAudio) {
   console.error("ASR 跳过：需要先由 TTS 生成一段测试音频。");
 } else if (!config.volcengineAsrApiKey && !config.volcengineAccessToken) {
-  failed = true;
-  console.error("ASR 测试失败：未配置 VOLCENGINE_ASR_API_KEY 或 VOLCENGINE_ACCESS_TOKEN。");
+  console.log("ASR 使用浏览器中文听写：未配置录音文件识别 1.0 专用凭证，未复用 TTS Key。 ");
 } else {
   try {
     const transcript = await transcribeVolcengineRecording({

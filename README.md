@@ -279,13 +279,13 @@ Content-Type: application/json
 
 ## 十、火山引擎一键配置
 
-如果使用同一个火山应用中开通的“语音合成 2.0”和“录音文件识别 1.0”：
+当前推荐的稳定组合是：语音输入使用 Edge/Chrome 浏览器中文听写，语音输出使用火山“语音合成 2.0”庄周音色。录音文件识别 1.0 只有拿到该服务自己的 API Key 或 Access Token 后才启用。
 
 1. 双击 `配置火山语音.cmd`。
 2. 输入应用的 App ID。
-3. 输入语音应用页面生成的 API Key；不要使用账号通用 Access Key，输入过程不会显示字符。
-4. 双击 `测试火山语音.cmd`，脚本会分别测试庄周 2.0 合成和录音文件识别。
-5. 双击 `启动现场版.cmd`，在网页中点击麦克风测试真实录音识别。
+3. 输入语音合成 2.0 页面生成的 API Key；不要使用账号通用 Access Key，输入过程不会显示字符。
+4. 双击 `测试火山语音.cmd`。脚本会测试庄周 2.0；若没有独立 ASR 凭证，会明确显示使用浏览器中文听写，不会错误复用 TTS Key。
+5. 双击 `启动现场版.cmd`，用 Edge 或 Chrome 打开网页并允许麦克风权限。
 
 向导会固定使用：
 
@@ -295,4 +295,4 @@ zh_male_zhuangzhou_uranus_bigtts
 
 真实密钥只写入被 Git 忽略的 `.env`，不会进入源码或 GitHub。
 
-如果 TTS 成功但 ASR 提示 `vc.async.default` 未授权，说明两项服务不能复用当前 Key。请在“录音文件识别 1.0”的“API 接入/调用示例”中复制其专用 API Key 到 `VOLCENGINE_ASR_API_KEY`；如果该页面显示的是 Access Token，则写入 `VOLCENGINE_ACCESS_TOKEN`，并保持 `VOLCENGINE_ASR_API_KEY` 为空。
+如果曾看到 `vc.async.default` 未授权，说明当前 Key 只属于 TTS。项目现在会自动保持 `STT_PROVIDER=browser`，不再发送这个错误请求。将来若要启用火山录音识别，请在“录音文件识别 1.0”的“API 接入/调用示例”中复制专用 API Key 到 `VOLCENGINE_ASR_API_KEY`；如果页面显示 Access Token，则写入 `VOLCENGINE_ACCESS_TOKEN`，再把 `STT_PROVIDER` 改为 `volcengine-recording-v1`。
