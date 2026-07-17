@@ -1,14 +1,15 @@
-# 西溪四福局·算命先生 Agent
+# 梁山福铺·知福先生 Agent
 
 这是一个可放在西溪湿地文创摊位现场运行的语音互动网页应用。游客可以：
 
-1. 和“四福先生”进行中文语音或文字对话。
-2. 体验 1089、6174 数学魔术或四方民俗娱乐签。
+1. 和“知福先生”进行中文语音或文字对话。
+2. 在自然对话中随机体验数字、颜色、方位或西溪景物等民俗娱乐小术，也可能只进行轻松聊天。
 3. 根据“为谁问、想要什么祝福、喜欢怎样的体验”获得一个明确商品推荐。
 4. 推荐结果只会是以下一种，不会同时推多个产品：
    - 某位人物的成品香囊。
    - 某位人物的 DIY 香囊。
-   - 某位人物主题随机福袋。
+   - 水浒随机福袋。
+   - 某位人物主题水浒头巾。
 
 当前四位人物：
 
@@ -25,11 +26,10 @@
 - OpenAI 风格语音识别和语音合成接口。
 - 浏览器语音听写和系统朗读降级方案。
 - 模型不可用时的本地规则推荐。
-- 1089 好汉点将术。
-- 6174 聚义回环术。
-- 四方时运娱乐签。
+- 随会话随机融入的 1089、数字、颜色、方位和西溪景物小术。
+- 对话结束后的吉利好运判词、商品图片与单品推荐理由。
 - 桌面和手机响应式布局。
-- 四张现有水浒人物图已内置。
+- 算命先生主视觉、四张水浒人物图与三类商品展示图已内置。
 
 ## 二、快速运行
 
@@ -74,11 +74,17 @@ http://localhost:5173
 
 ```dotenv
 MOCK_MODE=false
-LLM_BASE_URL=https://你的接口地址/v1
+LLM_BASE_URL=https://api.deepseek.com
 LLM_API_KEY=你的密钥
-LLM_MODEL=你的模型名
+LLM_MODEL=deepseek-v4-pro
+LLM_FALLBACK_MODELS=deepseek-v4-flash
 LLM_CHAT_PATH=/chat/completions
+LLM_MAX_TOKENS=2200
+LLM_TIMEOUT_MS=22000
+LLM_FALLBACK_TIMEOUT_MS=12000
 ```
+
+该配置实际请求 `https://api.deepseek.com/chat/completions`。DeepSeek 的 Base URL 不要求末尾带 `/v1`；本项目以 `deepseek-v4-pro` 作为稳定主模型，若主模型超时会立即切换到响应更快的 `deepseek-v4-flash`。若 V4 偶发返回“推理完成但正文为空”，会快速补试一次；仍不可用时由同一套长对话本地规则无缝接话，下一轮继续尝试 API，游客界面不会弹出技术错误。
 
 当前服务端默认兼容以下请求格式：
 
@@ -92,8 +98,10 @@ Content-Type: application/json
 
 ```json
 {
-  "model": "your-model",
+  "model": "deepseek-v4-pro",
   "temperature": 0.75,
+  "max_tokens": 2200,
+  "response_format": { "type": "json_object" },
   "messages": [
     { "role": "system", "content": "..." },
     { "role": "user", "content": "..." }
@@ -235,9 +243,9 @@ Content-Type: application/json
 
 ```text
 算命先生Agent/
-├─ design/                  界面概念图和 GPT Image 2 提示词
+├─ garden-gpt-image-2/      界面概念图和 GPT Image 2 提示词
 ├─ docs/                    接口、对话和现场运营说明
-├─ public/assets/           四张水浒人物图
+├─ public/assets/           人物、算命先生和商品图片
 ├─ server/                  本地服务端、模型与语音代理
 ├─ src/                     React 前端
 ├─ .env.example             配置模板
@@ -253,7 +261,7 @@ Content-Type: application/json
 - 文本、STT、TTS 接口适配：`server/providers.mjs`
 - 服务端路由：`server/index.mjs`
 - 主界面状态：`src/App.jsx`
-- 三种小术：`src/components/MagicPanel.jsx`
+- 对话内随机小术与江湖商人人设：`server/prompt.mjs`
 - 语音输入输出：`src/hooks/useVoice.js`
 
 ## 九、上线前检查
@@ -262,7 +270,7 @@ Content-Type: application/json
 - [ ] `MOCK_MODE=false` 后真实模型能返回推荐。
 - [ ] 麦克风权限已允许。
 - [ ] 现场网络和备用热点均测试过。
-- [ ] 四张人物图正常加载。
+- [ ] 算命先生主视觉和三张商品图正常加载。
 - [ ] 扬声器音量不会影响周围游客。
 - [ ] 模型输出不会承诺疾病、财运、考试或命运结果。
 - [ ] 每次最终只出现一个商品。
@@ -271,13 +279,13 @@ Content-Type: application/json
 
 ## 十、火山引擎一键配置
 
-如果使用同一个火山应用中开通的“语音合成 2.0”和“录音文件识别 1.0”：
+当前推荐的稳定组合是：语音输入使用 Edge/Chrome 浏览器中文听写，语音输出使用火山“语音合成 2.0”庄周音色。录音文件识别 1.0 只有拿到该服务自己的 API Key 或 Access Token 后才启用。
 
 1. 双击 `配置火山语音.cmd`。
 2. 输入应用的 App ID。
-3. 输入 API Key；输入过程不会显示字符。
-4. 双击 `测试火山语音.cmd` 测试庄周 2.0 音色。
-5. 双击 `启动现场版.cmd`，在网页中点击麦克风测试真实录音识别。
+3. 输入语音合成 2.0 页面生成的 API Key；不要使用账号通用 Access Key，输入过程不会显示字符。
+4. 双击 `测试火山语音.cmd`。脚本会测试庄周 2.0；若没有独立 ASR 凭证，会明确显示使用浏览器中文听写，不会错误复用 TTS Key。
+5. 双击 `启动现场版.cmd`，用 Edge 或 Chrome 打开网页并允许麦克风权限。
 
 向导会固定使用：
 
@@ -286,3 +294,5 @@ zh_male_zhuangzhou_uranus_bigtts
 ```
 
 真实密钥只写入被 Git 忽略的 `.env`，不会进入源码或 GitHub。
+
+如果曾看到 `vc.async.default` 未授权，说明当前 Key 只属于 TTS。项目现在会自动保持 `STT_PROVIDER=browser`，不再发送这个错误请求。将来若要启用火山录音识别，请在“录音文件识别 1.0”的“API 接入/调用示例”中复制专用 API Key 到 `VOLCENGINE_ASR_API_KEY`；如果页面显示 Access Token，则写入 `VOLCENGINE_ACCESS_TOKEN`，再把 `STT_PROVIDER` 改为 `volcengine-recording-v1`。

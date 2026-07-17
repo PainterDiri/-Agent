@@ -7,7 +7,7 @@ Primary screen composition:
 - A narrow left character rail showing four bold black-and-white Chinese woodcut poster thumbnails: Lu Zhishen / 拔掉烦恼, Li Kui / 快乐加倍, Zhang Shun / 顺风顺水, An Daoquan / 安到全家. Strong rough ink borders, friendly folk-print characters, clearly distinct.
 - A broad central conversation stage with a warm, dignified fortune-teller voice. Large readable Chinese transcript, only 2-4 short dialogue turns visible. The current question is the main focal point: “今日想为谁问一份好彩头？” with three large answer controls “自己 / 家人 / 一路同行的人”.
 - Bottom center has a large circular vermilion microphone button with a familiar white microphone icon, stable fixed dimensions, soft press animation cue, label below “按住说话”. Beside it are small familiar icons for keyboard input and replay audio, each with tooltips implied.
-- A slim top bar with the literal product/app name “西溪四福局”, a quiet session reset icon, volume icon, and status text “民俗娱乐体验”. No badges or marketing copy.
+- A slim top bar with the literal product/app name “梁山福铺”, a quiet session reset icon, volume icon, and status text “民俗娱乐体验”. No badges or marketing copy.
 - The right side is an open unframed recommendation region, currently in a subtle waiting state with one product sample image silhouette and the text “问完三题，为你点一件今日福物”. It must clearly be designed to later show one product only, not a grid.
 - At the lower edge, show a compact horizontal math-magic progress strip with three steps: “选数 → 变换 → 揭晓”, current step one highlighted. It should feel inviting for children and credible for adults.
 

@@ -53,13 +53,42 @@ test("Volcengine TTS 2.0 sends the selected voice and joins audio chunks", async
     assert.equal(result.buffer.toString(), "firstsecond");
     assert.equal(calls.length, 1);
     const request = calls[0];
-    assert.equal(request.options.headers["X-Api-App-Id"], "test-app");
-    assert.equal(request.options.headers["X-Api-Access-Key"], "test-key");
+    assert.equal(request.options.headers["X-Api-Key"], "test-key");
     assert.equal(request.options.headers["X-Api-Resource-Id"], "seed-tts-2.0");
+    assert.match(request.options.headers["X-Api-Connect-Id"], /^[0-9a-f-]{36}$/);
     const payload = JSON.parse(request.options.body);
     assert.equal(payload.req_params.speaker, "zh_male_zhuangzhou_uranus_bigtts");
     assert.equal(payload.req_params.audio_params.format, "mp3");
     assert.equal(payload.req_params.audio_params.speech_rate, -8);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("Volcengine TTS 2.0 parses SSE responses", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => new Response([
+    "event: 352",
+    `data: ${JSON.stringify({ code: 0, data: Buffer.from("audio").toString("base64") })}`,
+    "",
+    "event: 152",
+    `data: ${JSON.stringify({ code: 20000000, message: "done" })}`,
+    "",
+  ].join("\n"), { status: 200, headers: { "Content-Type": "text/event-stream" } });
+
+  try {
+    const result = await synthesizeVolcengineSpeech({
+      config: {
+        volcengineTtsApiKey: "test-key",
+        volcengineTtsEndpoint: "https://example.test/tts/sse",
+        volcengineTtsResourceId: "seed-tts-2.0",
+        volcengineTtsVoiceType: "zh_male_zhuangzhou_uranus_bigtts",
+        volcengineTtsSpeechRate: -8,
+        volcengineTtsLoudnessRate: 0,
+      },
+      text: "测试 SSE",
+    });
+    assert.equal(result.buffer.toString(), "audio");
   } finally {
     global.fetch = originalFetch;
   }
@@ -81,7 +110,7 @@ test("Volcengine recording recognition 1.0 converts audio, submits and polls", a
     }
     queryCount += 1;
     if (queryCount === 1) return Response.json({ code: 2000, message: "processing" });
-    return Response.json({ code: 0, result: { text: "西溪四福局" } });
+    return Response.json({ code: 0, result: { text: "梁山福铺" } });
   };
 
   try {
@@ -102,7 +131,7 @@ test("Volcengine recording recognition 1.0 converts audio, submits and polls", a
       },
     });
 
-    assert.equal(text, "西溪四福局");
+    assert.equal(text, "梁山福铺");
     assert.equal(calls.length, 3);
     assert.match(calls[0].url, /appid=app-1/);
     assert.match(calls[0].url, /language=zh-CN/);

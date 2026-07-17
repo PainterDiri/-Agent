@@ -27,32 +27,55 @@ function parseJsonObject(text) {
 }
 
 export async function callChatModel({ config, messages, systemPrompt }) {
-  const response = await fetchWithTimeout(
-    joinUrl(config.llmBaseUrl, config.llmChatPath),
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.llmApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: config.llmModel,
-        temperature: config.llmTemperature,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-      }),
-    },
-    config.llmTimeoutMs,
-  );
+  const models = [...new Set([config.llmModel, ...(config.llmFallbackModels || [])].filter(Boolean))];
+  const errors = [];
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`文本模型请求失败 (${response.status}): ${detail.slice(0, 500)}`);
+  for (const [index, model] of models.entries()) {
+    const timeoutMs = index === 0 ? config.llmTimeoutMs : (config.llmFallbackTimeoutMs || config.llmTimeoutMs);
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const response = await fetchWithTimeout(
+          joinUrl(config.llmBaseUrl, config.llmChatPath),
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${config.llmApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              temperature: config.llmTemperature,
+              max_tokens: config.llmMaxTokens,
+              response_format: { type: "json_object" },
+              messages: [{ role: "system", content: systemPrompt }, ...messages],
+            }),
+          },
+          timeoutMs,
+        );
+
+        if (!response.ok) {
+          const detail = await response.text();
+          throw new Error(`请求失败 (${response.status}): ${detail.slice(0, 500)}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (!content?.trim()) {
+          const reasoningTokens = data.usage?.completion_tokens_details?.reasoning_tokens;
+          const finishReason = data.choices?.[0]?.finish_reason || "unknown";
+          const emptyError = new Error(`响应正文为空${reasoningTokens ? `，已消耗 ${reasoningTokens} 个推理 token` : ""}，finish=${finishReason}`);
+          emptyError.retryEmptyResponse = true;
+          throw emptyError;
+        }
+        return { data: parseJsonObject(content), model };
+      } catch (error) {
+        errors.push(`${model}#${attempt}: ${error.name === "AbortError" ? "请求超时" : error.message}`);
+        if (!error.retryEmptyResponse) break;
+      }
+    }
   }
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("文本模型响应中没有 message.content");
-  return parseJsonObject(content);
+  throw new Error(`文本模型全部失败：${errors.join("；")}`);
 }
 
 export async function transcribeAudio({ config, file }) {
